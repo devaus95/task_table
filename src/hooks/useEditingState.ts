@@ -48,14 +48,15 @@ export const useEditingState = () => {
       const variable = variables.find((v) => v.index === rowIndex);
       if (!variable) return;
 
-      // 清除之前编辑单元格的错误状态（如果有）
-      if (editingCell.rowIndex !== null && editingCell.column !== null) {
-        const prevKey = `${editingCell.column}-${editingCell.rowIndex}`;
-        setError(prevKey, null);
-      }
-
-      // 设置编辑状态
-      setEditingCell({ rowIndex, column });
+      // 设置编辑状态（使用函数式更新避免依赖 editingCell）
+      setEditingCell((prev) => {
+        // 清除之前编辑单元格的错误状态（如果有）
+        if (prev.rowIndex !== null && prev.column !== null) {
+          const prevKey = `${prev.column}-${prev.rowIndex}`;
+          setError(prevKey, null);
+        }
+        return { rowIndex, column };
+      });
 
       // 初始化临时值
       const key = `${column}-${rowIndex}`;
@@ -73,7 +74,7 @@ export const useEditingState = () => {
         [key]: originalValue,
       }));
     },
-    [editingCell]
+    []
   );
 
   /**
@@ -81,23 +82,25 @@ export const useEditingState = () => {
    */
   const cancelEditing = useCallback(
     (setError: (key: string, error: ValidationError | null) => void) => {
-      if (editingCell.rowIndex === null || editingCell.column === null) return;
+      // 使用函数式更新避免依赖 editingCell
+      setEditingCell((prev) => {
+        if (prev.rowIndex === null || prev.column === null) return prev;
 
-      const key = `${editingCell.column}-${editingCell.rowIndex}`;
+        const key = `${prev.column}-${prev.rowIndex}`;
 
-      // 清除临时值和错误状态
-      setTempValues((prev) => {
-        const newValues = { ...prev };
-        delete newValues[key];
-        return newValues;
+        // 清除临时值
+        setTempValues((prevTemp) => {
+          const newValues = { ...prevTemp };
+          delete newValues[key];
+          return newValues;
+        });
+
+        setError(key, null);
+
+        return { rowIndex: null, column: null };
       });
-
-      setError(key, null);
-
-      // 清除编辑状态
-      setEditingCell({ rowIndex: null, column: null });
     },
-    [editingCell]
+    []
   );
 
   /**

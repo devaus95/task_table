@@ -71,8 +71,7 @@ export function validateBoolDefaultValue(
  */
 export function validateVariableName(
   name: string,
-  existingNames: string[],
-  _currentId?: string
+  existingNames: string[]
 ): SimpleValidationResult {
   const trimmedName = name.trim();
 
