@@ -66,11 +66,11 @@
   - [x] SubTask 7.2: 编写组件测试（表格渲染、用户交互）
   - [x] SubTask 7.3: 编写集成测试（完整的添加、编辑、删除流程）
 
-- [ ] Task 8: 文档和部署准备
-  - [ ] SubTask 8.1: 更新README.md（项目说明、运行步骤、项目结构）
-  - [ ] SubTask 8.2: 更新Spec文档匹配实际实现
+- [x] Task 8: 文档和部署准备
+  - [x] SubTask 8.1: 更新README.md（项目说明、运行步骤、项目结构）
+  - [x] SubTask 8.2: 更新Spec文档匹配实际实现
   - [x] SubTask 8.3: 样式统一为Less
-  - [ ] SubTask 8.4: 准备项目部署
+  - [x] SubTask 8.4: 准备项目部署
 
 # Task Dependencies
 - [Task 1] depends on [Task 0] (项目初始化需要先确定技术栈)
