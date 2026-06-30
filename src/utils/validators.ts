@@ -72,7 +72,7 @@ export function validateBoolDefaultValue(
 export function validateVariableName(
   name: string,
   existingNames: string[],
-  currentId?: string
+  _currentId?: string
 ): SimpleValidationResult {
   const trimmedName = name.trim();
 
@@ -107,4 +107,7 @@ export function validateDefaultValue(
   if (dataType === 'BOOL') {
     return validateBoolDefaultValue(defaultValue);
   } else if (dataType === 'INT') {
-    return validateInt
+    return validateIntDefaultValue(defaultValue);
+  }
+  return { isValid: true };
+}

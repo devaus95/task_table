@@ -1,0 +1,35 @@
+.table-editor {
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.table-toolbar {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: #fafafa;
+  border-radius: 4px;
+  border: 1px solid #e8e8e8;
+}
+
+.table-editor .ant-table-wrapper {
+  overflow-x: auto;
+}
+
+.table-editor .ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 600;
+}
+
+.table-editor .ant-table-tbody > tr:hover {
+  background: #f5f5f5;
+}
+
+.table-editor .ant-input {
+  width: 100%;
+}
+
+.table-editor .ant-select {
+  width: 100%;
+}
