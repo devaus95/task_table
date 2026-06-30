@@ -8,9 +8,20 @@ import type { ValidationError } from '../types/validation';
 import { RepositoryFactory } from '../repository/RepositoryFactory';
 
 /**
+ * Store 配置选项
+ */
+export interface TableStoreConfig {
+  /** 是否启用持久化，默认 false（符合AC1每次打开显示空表） */
+  persistence?: boolean;
+}
+
+/**
  * 表格状态接口
  */
 interface TableState {
+  // 配置
+  config: TableStoreConfig;
+
   // 状态数据
   variables: Variable[];
   selectedRowIndex: number | null;
@@ -55,114 +66,121 @@ const repository = RepositoryFactory.createRepository('localStorage');
 /**
  * 创建表格状态Store
  */
-export const useTableStore = create<TableState>((set, get) => ({
-  // 初始状态
-  variables: [],
-  selectedRowIndex: null,
-  errors: new Map(),
+export const createTableStore = (config: TableStoreConfig = {}) => {
+  return create<TableState>((set, get) => ({
+    config: { persistence: config.persistence ?? false },
 
-  // 基础操作
-  setVariables: (variables) => set({ variables }),
-  setSelectedRowIndex: (index) => set({ selectedRowIndex: index }),
+    // 初始状态
+    variables: [],
+    selectedRowIndex: null,
+    errors: new Map(),
 
-  // 行操作（异步，成功后自动保存到localStorage）
-  addRow: async () => {
-    const { variables, getNextIndex, saveToStorage } = get();
-    const newVariable: Variable = {
-      id: generateId(),
-      index: getNextIndex(),
-      name: '',
-      dataType: '', // 默认为空，用户需要选择数据类型
-      defaultValue: '', // 默认值为空，用户需要填写
-      comment: '',
-      updatedAt: new Date(),
-    };
-    const newVariables = [...variables, newVariable];
-    set({ variables: newVariables });
-    // 保存到localStorage
-    await saveToStorage();
-  },
+    // 基础操作
+    setVariables: (variables) => set({ variables }),
+    setSelectedRowIndex: (index) => set({ selectedRowIndex: index }),
 
-  deleteRow: async (index) => {
-    const { variables, saveToStorage } = get();
-    // 过滤掉被删除的行，并重新计算后续行的Index
-    const filtered = variables.filter((v) => v.index !== index);
-    const newVariables = filtered.map((v, i) => ({
-      ...v,
-      index: i + 1,
-    }));
-    set({ variables: newVariables });
-    // 保存到localStorage
-    await saveToStorage();
-  },
+    // 行操作（持久化受 config.persistence 控制）
+    addRow: async () => {
+      const { variables, getNextIndex, saveToStorage } = get();
+      const newVariable: Variable = {
+        id: generateId(),
+        index: getNextIndex(),
+        name: '',
+        dataType: '',
+        defaultValue: '',
+        comment: '',
+        updatedAt: new Date(),
+      };
+      const newVariables = [...variables, newVariable];
+      set({ variables: newVariables });
+      if (get().config.persistence) await saveToStorage();
+    },
 
-  deleteSelectedRow: async () => {
-    const { selectedRowIndex, deleteRow } = get();
-    if (selectedRowIndex !== null) {
-      await deleteRow(selectedRowIndex);
-      set({ selectedRowIndex: null });
-    }
-  },
+    deleteRow: async (index) => {
+      const { variables, saveToStorage } = get();
+      const filtered = variables.filter((v) => v.index !== index);
+      const newVariables = filtered.map((v, i) => ({
+        ...v,
+        index: i + 1,
+      }));
+      set({ variables: newVariables });
+      if (get().config.persistence) await saveToStorage();
+    },
 
-  updateRow: async (index, updates) => {
-    const { variables, saveToStorage } = get();
-    const newVariables = variables.map((v) =>
-      v.index === index ? { ...v, ...updates, updatedAt: new Date() } : v
-    );
-    set({ variables: newVariables });
-    // 保存到localStorage
-    await saveToStorage();
-  },
-
-  // 验证操作
-  setError: (id, error) => {
-    const { errors } = get();
-    const newErrors = new Map(errors);
-    if (error) {
-      newErrors.set(id, error);
-    } else {
-      newErrors.delete(id);
-    }
-    set({ errors: newErrors });
-  },
-
-  clearErrors: () => set({ errors: new Map() }),
-
-  // 持久化操作
-  loadFromStorage: async () => {
-    try {
-      const savedVariables = await repository.getAll();
-      if (savedVariables.length > 0) {
-        set({ variables: savedVariables });
-        console.log('Data loaded from localStorage successfully');
+    deleteSelectedRow: async () => {
+      const { selectedRowIndex, deleteRow } = get();
+      if (selectedRowIndex !== null) {
+        await deleteRow(selectedRowIndex);
+        set({ selectedRowIndex: null });
       }
-    } catch (error) {
-      console.error('Failed to load variables:', error);
-    }
-  },
+    },
 
-  saveToStorage: async () => {
-    try {
+    updateRow: async (index, updates) => {
+      const { variables, saveToStorage } = get();
+      const newVariables = variables.map((v) =>
+        v.index === index ? { ...v, ...updates, updatedAt: new Date() } : v
+      );
+      set({ variables: newVariables });
+      if (get().config.persistence) await saveToStorage();
+    },
+
+    // 验证操作
+    setError: (id, error) => {
+      const { errors } = get();
+      const newErrors = new Map(errors);
+      if (error) {
+        newErrors.set(id, error);
+      } else {
+        newErrors.delete(id);
+      }
+      set({ errors: newErrors });
+    },
+
+    clearErrors: () => set({ errors: new Map() }),
+
+    // 持久化操作
+    loadFromStorage: async () => {
+      if (!get().config.persistence) return;
+      try {
+        const savedVariables = await repository.getAll();
+        if (savedVariables.length > 0) {
+          set({ variables: savedVariables });
+          console.log('Data loaded from localStorage successfully');
+        }
+      } catch (error) {
+        console.error('Failed to load variables:', error);
+      }
+    },
+
+    saveToStorage: async () => {
+      if (!get().config.persistence) return;
+      try {
+        const { variables } = get();
+        await repository.saveAll(variables);
+        console.log('Data saved to localStorage successfully');
+      } catch (error) {
+        console.error('Failed to save variables:', error);
+      }
+    },
+
+    // 工具方法
+    getNextIndex: () => {
       const { variables } = get();
-      await repository.saveAll(variables);
-      console.log('Data saved to localStorage successfully');
-    } catch (error) {
-      console.error('Failed to save variables:', error);
-    }
-  },
+      if (variables.length === 0) return 1;
+      return Math.max(...variables.map((v) => v.index)) + 1;
+    },
 
-  // 工具方法
-  getNextIndex: () => {
-    const { variables } = get();
-    if (variables.length === 0) return 1;
-    return Math.max(...variables.map((v) => v.index)) + 1;
-  },
+    getVariableById: (id) => {
+      return get().variables.find((v) => v.id === id);
+    },
 
-  getVariableById: (id) => {
-    return get().variables.find((v) => v.id === id);
-  },
+    getVariableByIndex: (index) => {
+      return get().variables.find((v) => v.index === index);
+    },
+  }));
+};
 
-  getVariableByIndex: (index) => {
-    return get().variables.find((v) => v.index === index);
-  },
-}));
+/**
+ * 默认导出：持久化关闭的 store 实例
+ */
+export const useTableStore = createTableStore();

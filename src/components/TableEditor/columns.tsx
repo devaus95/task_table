@@ -81,7 +81,14 @@ export const useColumns = (params: ColumnsConfigParams): ColumnsType<Variable> =
               error={error}
               placeholder="Enter variable name"
               onChange={(value) => updateTempValue(`name-${record.index}`, value)}
-              onBlur={() => validateAndSaveName(record.index)}
+              onBlur={() => {
+                // 如果当前已有错误，blur时清除错误并退出编辑
+                if (error) {
+                  cancelEditing();
+                } else {
+                  validateAndSaveName(record.index);
+                }
+              }}
               onKeyDown={(e) => handleKeyDown(e, record.index, 'name')}
               onClick={() => startEditing(record.index, 'name')}
             />
@@ -99,7 +106,7 @@ export const useColumns = (params: ColumnsConfigParams): ColumnsType<Variable> =
 
           return (
             <DataTypeCell
-              value={text}
+              value={text as '' | 'BOOL' | 'INT'}
               isEditing={isEditing}
               onChange={(value) => saveDataType(record.index, value)}
               onBlur={cancelEditing}
@@ -127,7 +134,14 @@ export const useColumns = (params: ColumnsConfigParams): ColumnsType<Variable> =
               error={error}
               placeholder={record.dataType === 'BOOL' ? 'true/false' : 'Enter integer'}
               onChange={(value) => updateTempValue(`defaultValue-${record.index}`, value)}
-              onBlur={() => validateAndSaveDefaultValue(record.index)}
+              onBlur={() => {
+                // 如果当前已有错误，blur时清除错误并退出编辑
+                if (error) {
+                  cancelEditing();
+                } else {
+                  validateAndSaveDefaultValue(record.index);
+                }
+              }}
               onKeyDown={(e) => handleKeyDown(e, record.index, 'defaultValue')}
               onClick={() => startEditing(record.index, 'defaultValue')}
             />

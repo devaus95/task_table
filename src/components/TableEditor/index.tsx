@@ -97,6 +97,7 @@ export const TableEditor: React.FC = () => {
     selectedRowIndex,
     clearTempValueAndEditing,
     cancelEditing,
+    updateTempValue,
   });
 
   // 使用列配置hook

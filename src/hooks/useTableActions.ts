@@ -23,6 +23,7 @@ export interface UseTableActionsParams {
   selectedRowIndex: number | null;
   clearTempValueAndEditing: (key: string) => void;
   cancelEditing: () => void;
+  updateTempValue: (key: string, value: string) => void;
 }
 
 /**
@@ -56,6 +57,7 @@ export const useTableActions = (params: UseTableActionsParams): UseTableActionsR
     selectedRowIndex,
     clearTempValueAndEditing,
     cancelEditing,
+    updateTempValue,
   } = params;
 
   /**
@@ -78,11 +80,13 @@ export const useTableActions = (params: UseTableActionsParams): UseTableActionsR
       const result: SimpleValidationResult = validateVariableName(newName, otherNames);
 
       if (!result.isValid) {
+        // 验证失败：设置错误提示 + 恢复原始值，保留编辑状态让用户看到错误
         setError(key, {
           field: 'name',
           message: result.error || 'Invalid name',
           rowIndex,
         });
+        updateTempValue(key, variable.name);
         return false;
       }
 
@@ -95,7 +99,7 @@ export const useTableActions = (params: UseTableActionsParams): UseTableActionsR
 
       return true;
     },
-    [variables, tempValues, updateRow, setError, clearTempValueAndEditing]
+    [variables, tempValues, updateRow, updateTempValue, setError, clearTempValueAndEditing]
   );
 
   /**
@@ -115,11 +119,13 @@ export const useTableActions = (params: UseTableActionsParams): UseTableActionsR
       const result = validateDefaultValue(variable.dataType, newValue);
 
       if (!result.isValid) {
+        // 验证失败：设置错误提示 + 恢复原始值，保留编辑状态让用户看到错误
         setError(key, {
           field: 'defaultValue',
           message: result.error || 'Invalid value',
           rowIndex,
         });
+        updateTempValue(key, variable.defaultValue);
         return false;
       }
 
@@ -134,7 +140,7 @@ export const useTableActions = (params: UseTableActionsParams): UseTableActionsR
 
       return true;
     },
-    [variables, tempValues, updateRow, setError, clearTempValueAndEditing]
+    [variables, tempValues, updateRow, updateTempValue, setError, clearTempValueAndEditing]
   );
 
   /**
