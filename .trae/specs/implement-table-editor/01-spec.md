@@ -12,11 +12,25 @@
 - 实现数据验证逻辑（名称唯一性、数据类型、默认值格式）
 - 支持BOOL和INT两种数据类型
 - 提供清晰的项目结构和文档
+- 使用Less作为CSS预处理器
+- 页面占满一屏，表格内部滚动（基于ResizeObserver动态计算高度）
 
 ## Impact
 - 创建新的前端应用项目
 - 需要选择合适的表格组件库、CSS框架和状态管理方案
 - 需要实现完整的用户交互和数据验证逻辑
+
+## 实际技术栈
+| 类别 | 技术选型 | 实际版本 |
+|------|---------|---------|
+| 构建工具 | Vite | ^8.1.0 |
+| UI框架 | React | ^19.2.7 |
+| 语言 | TypeScript | ~6.0.2 |
+| 表格/UI组件 | Ant Design (antd) | ^6.5.0 |
+| 图标 | @ant-design/icons | ^6.3.2 |
+| 状态管理 | Zustand | ^5.0.14 |
+| CSS预处理 | Less | ^4.6.7 |
+| 测试 | Vitest + Testing Library | ^4.1.9 |
 
 ## ADDED Requirements
 
@@ -28,6 +42,7 @@
 - **THEN** 显示一个空表格，包含Index、Name、Data Type、Default Value、Comment列
 - **AND** Index列只读且自动生成
 - **AND** 显示"Add Row"和"Delete Row"按钮
+- **AND** 页面占满一屏高度，表格区域内部滚动
 
 ### Requirement: 添加变量行
 系统应当支持用户添加新的变量行到表格中。
@@ -67,7 +82,7 @@
 
 #### Scenario: 选择数据类型
 - **WHEN** 用户双击数据类型单元格
-- **THEN** 显示包含BOOL和INT选项的下拉菜单
+- **THEN** 显示包含BOOL和INT选项的下拉菜单（使用Select的options属性，非Select.Option）
 - **AND** 选择后，单元格显示所选类型
 
 #### Scenario: 数据类型切换时更新默认值
@@ -102,17 +117,22 @@
 - **THEN** 接受任何文本输入
 - **AND** 值可以为空
 
-### Requirement: 项目结构和技术栈
-系统应当使用指定的技术栈和清晰的项目结构。
+### Requirement: 键盘快捷键
+系统应当支持键盘快捷键提升操作效率。
 
-#### Scenario: 技术栈选择
-- **GIVEN** 项目使用React + TypeScript
-- **WHEN** 选择技术栈
-- **THEN** 使用任意表格组件库（如ag-Grid, react-table, antd Table等）
-- **AND** 使用任意CSS框架和组件库
-- **AND** 使用任意状态管理方案（Mobx, Redux, Zustand等）
-- **AND** 清晰的代码结构和组件职责
-- **AND** 可使用任意测试框架（jest, vitest, playwright等）
+#### Scenario: 键盘操作
+- **WHEN** 用户在编辑框中按Enter键
+- **THEN** 保存当前编辑内容并退出编辑态
+- **WHEN** 用户在编辑框中按Escape键
+- **THEN** 取消编辑，恢复原始值
+
+### Requirement: 数据持久化
+系统应当支持数据在浏览器刷新后不丢失。
+
+#### Scenario: 数据持久化
+- **WHEN** 用户修改表格数据后刷新页面
+- **THEN** 之前保存的数据自动从localStorage加载恢复
+- **AND** 使用Repository Pattern架构，支持未来扩展到IndexedDB或远程API
 
 ## MODIFIED Requirements
 无

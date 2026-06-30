@@ -3,27 +3,16 @@
  * 实现变量表编辑功能
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
-import { Table, Button, Space, Input, Select, message, Typography, Card, Divider } from 'antd';
-import { PlusOutlined, DeleteOutlined, SaveOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import type { Variable } from '../../types/variable';
+import React, { useEffect, useCallback, useRef, useLayoutEffect, useState } from 'react';
+import { Table, Button, Space, Typography, Card, Tooltip, Divider } from 'antd';
+import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useTableStore } from '../../store/tableStore';
-import { usePersistence } from '../../hooks/usePersistence';
-import { validateVariableName, validateDefaultValue } from '../../utils/validators';
-import type { SimpleValidationResult } from '../../types/validation';
-import './index.css';
+import { useEditingState } from '../../hooks/useEditingState';
+import { useTableActions } from '../../hooks/useTableActions';
+import { useColumns } from './columns';
+import './index.less';
 
-const { Option } = Select;
 const { Title } = Typography;
-
-/**
- * 编辑状态接口
- */
-interface EditingValues {
-  name?: string;
-  defaultValue?: string;
-}
 
 /**
  * TableEditor 组件
@@ -38,250 +27,92 @@ export const TableEditor: React.FC = () => {
   const updateRow = useTableStore((state) => state.updateRow);
   const setSelectedRowIndex = useTableStore((state) => state.setSelectedRowIndex);
   const setError = useTableStore((state) => state.setError);
+  const loadFromStorage = useTableStore((state) => state.loadFromStorage);
 
-  // 使用持久化Hook
-  usePersistence();
+  // 动态计算表格滚动高度
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [tableScrollY, setTableScrollY] = useState(400);
 
-  // 临时编辑状态（存储用户正在输入的值）
-  const [editingValues, setEditingValues] = useState<Map<number, EditingValues>>(new Map());
+  useLayoutEffect(() => {
+    const calcHeight = () => {
+      if (!wrapperRef.current) return;
+      const wrapperRect = wrapperRef.current.getBoundingClientRect();
+      const available = wrapperRect.height - 50;
+      if (available > 0) setTableScrollY(available);
+    };
+    calcHeight();
+    const observer = new ResizeObserver(calcHeight);
+    if (wrapperRef.current) observer.observe(wrapperRef.current);
+    window.addEventListener('resize', calcHeight);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', calcHeight);
+    };
+  }, []);
 
-  /**
-   * 开始编辑：存储临时值
-   */
+  // 初始化时从localStorage加载数据
+  useEffect(() => {
+    loadFromStorage();
+  }, [loadFromStorage]);
+
+  // 使用编辑状态管理hook
+  const {
+    editingCell,
+    tempValues,
+    startEditing: startEditingBase,
+    cancelEditing: cancelEditingBase,
+    updateTempValue,
+    clearTempValueAndEditing,
+  } = useEditingState();
+
+  // 包装startEditing函数以符合原始接口
   const startEditing = useCallback(
-    (index: number, field: 'name' | 'defaultValue', value: string) => {
-      setEditingValues((prev) => {
-        const newMap = new Map(prev);
-        const current = newMap.get(index) || {};
-        newMap.set(index, { ...current, [field]: value });
-        return newMap;
-      });
+    (rowIndex: number, column: 'name' | 'dataType' | 'defaultValue' | 'comment') => {
+      startEditingBase(rowIndex, column, variables, setError);
     },
-    []
+    [startEditingBase, variables, setError]
   );
 
-  /**
-   * 验证并更新变量名称（onBlur时）
-   */
-  const validateAndUpdateName = useCallback(
-    (index: number) => {
-      const editingValue = editingValues.get(index);
-      if (!editingValue || editingValue.name === undefined) return;
+  // 包装cancelEditing函数以符合原始接口
+  const cancelEditing = useCallback(() => {
+    cancelEditingBase(setError);
+  }, [cancelEditingBase, setError]);
 
-      const newName = editingValue.name;
-      const variable = variables.find((v) => v.index === index);
-      if (!variable) return;
+  // 使用表格操作hook
+  const {
+    validateAndSaveName,
+    validateAndSaveDefaultValue,
+    saveComment,
+    saveDataType,
+    handleAddRow,
+    handleDeleteRow,
+    handleKeyDown,
+  } = useTableActions({
+    variables,
+    tempValues,
+    updateRow,
+    setError,
+    addRow,
+    deleteSelectedRow,
+    selectedRowIndex,
+    clearTempValueAndEditing,
+    cancelEditing,
+  });
 
-      // 获取其他变量的名称列表（排除当前变量）
-      const otherNames = variables.filter((v) => v.index !== index).map((v) => v.name);
-
-      // 验证名称
-      const result: SimpleValidationResult = validateVariableName(newName, otherNames);
-
-      if (!result.isValid) {
-        // 显示错误
-        setError(`name-${index}`, {
-          field: 'name',
-          message: result.error || 'Invalid name',
-          rowIndex: index,
-        });
-        message.error(result.error);
-        // 不更新，保留编辑状态让用户修改
-        return;
-      }
-
-      // 清除错误
-      setError(`name-${index}`, null);
-
-      // 更新名称
-      updateRow(index, { name: newName.trim() });
-
-      // 清除编辑状态
-      setEditingValues((prev) => {
-        const newMap = new Map(prev);
-        newMap.delete(index);
-        return newMap;
-      });
-
-      message.success('Name updated');
-    },
-    [variables, editingValues, updateRow, setError]
-  );
-
-  /**
-   * 验证并更新默认值（onBlur时）
-   */
-  const validateAndUpdateDefaultValue = useCallback(
-    (index: number) => {
-      const editingValue = editingValues.get(index);
-      if (!editingValue || editingValue.defaultValue === undefined) return;
-
-      const newValue = editingValue.defaultValue;
-      const variable = variables.find((v) => v.index === index);
-      if (!variable) return;
-
-      // 验证默认值
-      const result = validateDefaultValue(variable.dataType, newValue);
-
-      if (!result.isValid) {
-        // 显示错误
-        setError(`defaultValue-${index}`, {
-          field: 'defaultValue',
-          message: result.error || 'Invalid value',
-          rowIndex: index,
-        });
-        message.error(result.error);
-        // 不更新，保留编辑状态让用户修改
-        return;
-      }
-
-      // 清除错误
-      setError(`defaultValue-${index}`, null);
-
-      // 更新默认值（BOOL类型需要规范化）
-      updateRow(index, {
-        defaultValue: result.normalized || newValue.trim(),
-      });
-
-      // 清除编辑状态
-      setEditingValues((prev) => {
-        const newMap = new Map(prev);
-        newMap.delete(index);
-        return newMap;
-      });
-
-      message.success('Default value updated');
-    },
-    [variables, editingValues, updateRow, setError]
-  );
-
-  /**
-   * 更新数据类型
-   */
-  const handleDataTypeChange = useCallback(
-    (index: number, newDataType: 'BOOL' | 'INT') => {
-      const variable = variables.find((v) => v.index === index);
-      if (!variable) return;
-
-      // 更新数据类型和默认值
-      const newDefaultValue = newDataType === 'BOOL' ? 'TRUE' : '0';
-      updateRow(index, { dataType: newDataType, defaultValue: newDefaultValue });
-
-      // 清除默认值的错误
-      setError(`defaultValue-${index}`, null);
-
-      message.success('Data type updated');
-    },
-    [variables, updateRow, setError]
-  );
-
-  /**
-   * 更新注释（直接更新，无需验证）
-   */
-  const handleCommentChange = useCallback(
-    (index: number, newComment: string) => {
-      updateRow(index, { comment: newComment });
-    },
-    [updateRow]
-  );
-
-  /**
-   * 表格列定义
-   */
-  const columns: ColumnsType<Variable> = useMemo(
-    () => [
-      {
-        title: 'Index',
-        dataIndex: 'index',
-        key: 'index',
-        width: 80,
-        align: 'center',
-        render: (text: number) => <span style={{ fontWeight: 'bold' }}>{text}</span>,
-      },
-      {
-        title: 'Name',
-        dataIndex: 'name',
-        key: 'name',
-        width: 200,
-        render: (text: string, record: Variable) => {
-          const editingValue = editingValues.get(record.index);
-          const displayValue = editingValue?.name !== undefined ? editingValue.name : text;
-          const hasError = errors.has(`name-${record.index}`);
-
-          return (
-            <Input
-              value={displayValue}
-              placeholder="Enter variable name"
-              onChange={(e) => startEditing(record.index, 'name', e.target.value)}
-              onBlur={() => validateAndUpdateName(record.index)}
-              status={hasError ? 'error' : undefined}
-              autoFocus={editingValue?.name !== undefined}
-            />
-          );
-        },
-      },
-      {
-        title: 'Data Type',
-        dataIndex: 'dataType',
-        key: 'dataType',
-        width: 150,
-        render: (text: 'BOOL' | 'INT', record: Variable) => (
-          <Select
-            value={text}
-            onChange={(value) => handleDataTypeChange(record.index, value as 'BOOL' | 'INT')}
-            style={{ width: '100%' }}
-          >
-            <Option value="BOOL">BOOL</Option>
-            <Option value="INT">INT</Option>
-          </Select>
-        ),
-      },
-      {
-        title: 'Default Value',
-        dataIndex: 'defaultValue',
-        key: 'defaultValue',
-        width: 150,
-        render: (text: string, record: Variable) => {
-          const editingValue = editingValues.get(record.index);
-          const displayValue =
-            editingValue?.defaultValue !== undefined ? editingValue.defaultValue : text;
-          const hasError = errors.has(`defaultValue-${record.index}`);
-
-          return (
-            <Input
-              value={displayValue}
-              placeholder={record.dataType === 'BOOL' ? 'true/false' : 'Enter integer'}
-              onChange={(e) => startEditing(record.index, 'defaultValue', e.target.value)}
-              onBlur={() => validateAndUpdateDefaultValue(record.index)}
-              status={hasError ? 'error' : undefined}
-            />
-          );
-        },
-      },
-      {
-        title: 'Comment',
-        dataIndex: 'comment',
-        key: 'comment',
-        width: 250,
-        render: (text: string, record: Variable) => (
-          <Input
-            value={text}
-            placeholder="Enter comment (optional)"
-            onChange={(e) => handleCommentChange(record.index, e.target.value)}
-          />
-        ),
-      },
-    ],
-    [
-      editingValues,
-      errors,
-      startEditing,
-      validateAndUpdateName,
-      validateAndUpdateDefaultValue,
-      handleDataTypeChange,
-      handleCommentChange,
-    ]
-  );
+  // 使用列配置hook
+  const columns = useColumns({
+    editingCell,
+    tempValues,
+    errors,
+    startEditing,
+    updateTempValue,
+    validateAndSaveName,
+    validateAndSaveDefaultValue,
+    saveComment,
+    saveDataType,
+    handleKeyDown,
+    cancelEditing,
+  });
 
   /**
    * 行选择配置
@@ -293,26 +124,6 @@ export const TableEditor: React.FC = () => {
     },
     type: 'radio' as const,
   };
-
-  /**
-   * 添加新行
-   */
-  const handleAddRow = useCallback(() => {
-    addRow();
-    message.success('New row added');
-  }, [addRow]);
-
-  /**
-   * 删除选中的行
-   */
-  const handleDeleteRow = useCallback(() => {
-    if (selectedRowIndex === null) {
-      message.warning('Please select a row to delete');
-      return;
-    }
-    deleteSelectedRow();
-    message.success('Row deleted');
-  }, [selectedRowIndex, deleteSelectedRow]);
 
   return (
     <Card className="table-editor-card">
@@ -326,52 +137,52 @@ export const TableEditor: React.FC = () => {
         </div>
       </div>
 
-      <Divider />
-
+      <Divider style={{ margin: '10px 0' }}/>
       {/* 操作按钮区域 */}
       <div className="table-toolbar">
-        <Space size="middle">
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAddRow} size="large">
-            Add Row
-          </Button>
-          <Button
-            danger
-            icon={<DeleteOutlined />}
-            onClick={handleDeleteRow}
-            disabled={selectedRowIndex === null}
-            size="large"
+        <Space size="small">
+          <Tooltip title="Add a new row at the end of the table">
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAddRow} size="middle">
+              Add Row
+            </Button>
+          </Tooltip>
+          <Tooltip
+            title={
+              selectedRowIndex === null ? 'Select a row first to delete' : 'Delete the selected row'
+            }
           >
-            Delete Row
-          </Button>
-          <Button
-            icon={<SaveOutlined />}
-            onClick={() => message.success('Data automatically saved to localStorage')}
-            size="large"
-          >
-            Auto Saved
-          </Button>
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              onClick={handleDeleteRow}
+              disabled={selectedRowIndex === null}
+              size="middle"
+            >
+              Delete Row
+            </Button>
+          </Tooltip>
         </Space>
         <div className="toolbar-info">
           <span>Total: {variables.length} variables</span>
         </div>
       </div>
 
-      <Divider />
-
       {/* 表格区域 */}
-      <Table<Variable>
-        columns={columns}
-        dataSource={variables}
-        rowKey="index"
-        rowSelection={rowSelection}
-        pagination={false}
-        scroll={{ y: 500 }}
-        locale={{
-          emptyText: 'No data, click "Add Row" to add variables',
-        }}
-        bordered
-        size="middle"
-      />
+      <div ref={wrapperRef} className="table-wrapper">
+        <Table
+          columns={columns}
+          dataSource={variables}
+          rowKey="index"
+          rowSelection={rowSelection}
+          pagination={false}
+          scroll={{ y: tableScrollY }}
+          locale={{
+            emptyText: 'No data, click "Add Row" to add variables',
+          }}
+          bordered
+          size="small"
+        />
+      </div>
     </Card>
   );
 };

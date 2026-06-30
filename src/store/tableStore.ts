@@ -5,6 +5,7 @@
 import { create } from 'zustand';
 import type { Variable } from '../types/variable';
 import type { ValidationError } from '../types/validation';
+import { RepositoryFactory } from '../repository/RepositoryFactory';
 
 /**
  * 表格状态接口
@@ -20,14 +21,18 @@ interface TableState {
   setSelectedRowIndex: (index: number | null) => void;
 
   // 行操作
-  addRow: () => void;
-  deleteRow: (index: number) => void;
-  deleteSelectedRow: () => void;
-  updateRow: (index: number, updates: Partial<Variable>) => void;
+  addRow: () => Promise<void>;
+  deleteRow: (index: number) => Promise<void>;
+  deleteSelectedRow: () => Promise<void>;
+  updateRow: (index: number, updates: Partial<Variable>) => Promise<void>;
 
   // 验证操作
   setError: (id: string, error: ValidationError | null) => void;
   clearErrors: () => void;
+
+  // 持久化操作
+  loadFromStorage: () => Promise<void>;
+  saveToStorage: () => Promise<void>;
 
   // 工具方法
   getNextIndex: () => number;
@@ -43,6 +48,11 @@ const generateId = (): string => {
 };
 
 /**
+ * 创建Repository实例
+ */
+const repository = RepositoryFactory.createRepository('localStorage');
+
+/**
  * 创建表格状态Store
  */
 export const useTableStore = create<TableState>((set, get) => ({
@@ -55,41 +65,48 @@ export const useTableStore = create<TableState>((set, get) => ({
   setVariables: (variables) => set({ variables }),
   setSelectedRowIndex: (index) => set({ selectedRowIndex: index }),
 
-  // 行操作
-  addRow: () => {
-    const { variables, getNextIndex } = get();
+  // 行操作（异步，成功后自动保存到localStorage）
+  addRow: async () => {
+    const { variables, getNextIndex, saveToStorage } = get();
     const newVariable: Variable = {
       id: generateId(),
       index: getNextIndex(),
       name: '',
-      dataType: 'INT',
-      defaultValue: '0',
+      dataType: 'INT', // 默认数据类型为INT，用户可以修改
+      defaultValue: '', // 默认值为空，用户需要填写
       comment: '',
       updatedAt: new Date(),
     };
-    set({ variables: [...variables, newVariable] });
+    const newVariables = [...variables, newVariable];
+    set({ variables: newVariables });
+    // 保存到localStorage
+    await saveToStorage();
   },
 
-  deleteRow: (index) => {
-    const { variables } = get();
-    set({ variables: variables.filter((v) => v.index !== index) });
+  deleteRow: async (index) => {
+    const { variables, saveToStorage } = get();
+    const newVariables = variables.filter((v) => v.index !== index);
+    set({ variables: newVariables });
+    // 保存到localStorage
+    await saveToStorage();
   },
 
-  deleteSelectedRow: () => {
+  deleteSelectedRow: async () => {
     const { selectedRowIndex, deleteRow } = get();
     if (selectedRowIndex !== null) {
-      deleteRow(selectedRowIndex);
+      await deleteRow(selectedRowIndex);
       set({ selectedRowIndex: null });
     }
   },
 
-  updateRow: (index, updates) => {
-    const { variables } = get();
-    set({
-      variables: variables.map((v) =>
-        v.index === index ? { ...v, ...updates, updatedAt: new Date() } : v
-      ),
-    });
+  updateRow: async (index, updates) => {
+    const { variables, saveToStorage } = get();
+    const newVariables = variables.map((v) =>
+      v.index === index ? { ...v, ...updates, updatedAt: new Date() } : v
+    );
+    set({ variables: newVariables });
+    // 保存到localStorage
+    await saveToStorage();
   },
 
   // 验证操作
@@ -105,6 +122,29 @@ export const useTableStore = create<TableState>((set, get) => ({
   },
 
   clearErrors: () => set({ errors: new Map() }),
+
+  // 持久化操作
+  loadFromStorage: async () => {
+    try {
+      const savedVariables = await repository.getAll();
+      if (savedVariables.length > 0) {
+        set({ variables: savedVariables });
+        console.log('Data loaded from localStorage successfully');
+      }
+    } catch (error) {
+      console.error('Failed to load variables:', error);
+    }
+  },
+
+  saveToStorage: async () => {
+    try {
+      const { variables } = get();
+      await repository.saveAll(variables);
+      console.log('Data saved to localStorage successfully');
+    } catch (error) {
+      console.error('Failed to save variables:', error);
+    }
+  },
 
   // 工具方法
   getNextIndex: () => {

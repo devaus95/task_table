@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --port 3004",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -40,6 +40,7 @@
     "globals": "^17.6.0",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
+    "less": "^4.6.7",
     "lint-staged": "^17.0.8",
     "prettier": "^3.9.4",
     "typescript": "~6.0.2",

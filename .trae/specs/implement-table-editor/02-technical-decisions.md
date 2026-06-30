@@ -380,53 +380,65 @@ interface TableState {
 
 ## 最终技术栈总结
 
-| 技术类别 | 选择 | 版本建议 | 核心理由 |
+| 技术类别 | 选择 | 实际版本 | 核心理由 |
 |---------|------|---------|---------|
-| **构建工具** | Vite | ^5.0.0 | 快速、现代、零配置、TypeScript支持好 |
-| **表格组件** | antd Table | ^5.0.0 | 功能全面、开箱即用、企业级UI |
-| **UI框架** | Ant Design | ^5.0.0 | 企业级设计、组件丰富、中文支持 |
-| **状态管理** | Zustand | ^4.4.0 | 轻量、简单、TypeScript支持好、适合中小项目 |
-| **测试框架** | Vitest | ^1.0.0 | 与Vite集成好、快速、零配置 |
+| **构建工具** | Vite | ^8.1.0 | 快速、现代、零配置、TypeScript支持好 |
+| **表格组件** | antd Table | ^6.5.0 | 功能全面、开箱即用、企业级UI |
+| **UI框架** | Ant Design | ^6.5.0 | 企业级设计、组件丰富、中文支持 |
+| **状态管理** | Zustand | ^5.0.14 | 轻量、简单、TypeScript支持好、适合中小项目 |
+| **测试框架** | Vitest | ^4.1.9 | 与Vite集成好、快速、零配置 |
+| **CSS预处理** | Less | ^4.6.7 | 嵌套语法、变量、与Ant Design样式体系兼容 |
 
 ---
 
 ## 技术架构概览
 
-### 组件关系图
+### 组件关系图（实际实现）
 
 ```
-App
-├── TableEditor (主组件)
-│   ├── TableHeader (表格头部)
-│   ├── TableBody (表格主体)
-│   │   ├── TableRow (表格行)
-│   │   │   ├── IndexCell (索引单元格 - 只读)
-│   │   │   ├── NameCell (名称单元格 - 可编辑)
-│   │   │   ├── DataTypeCell (数据类型单元格 - 下拉选择)
-│   │   │   ├── DefaultValueCell (默认值单元格 - 可编辑)
-│   │   │   └── CommentCell (注释单元格 - 可编辑)
-│   │   └── ...
-│   └── Toolbar (工具栏)
-│       ├── AddRowButton (添加行按钮)
-│       └── DeleteRowButton (删除行按钮)
-└── ErrorBoundary (错误边界)
+main.tsx (StrictMode)
+  └── App.tsx (ConfigProvider - 中文locale)
+       └── TableEditor (Card包裹 - 单一主组件)
+            ├── 标题区 (Typography.Title + 描述文字)
+            ├── Divider (分隔线)
+            ├── 工具栏 (Button: Add Row / Delete Row + 变量计数)
+            └── Table (antd Table + ResizeObserver动态高度)
+                 ├── Index列 (只读, 粗体)
+                 ├── Name列 -> EditableCell (可编辑 + 验证 + Tooltip错误)
+                 ├── Data Type列 -> DataTypeCell (双击Select BOOL/INT)
+                 ├── Default Value列 -> EditableCell (可编辑 + 验证)
+                 └── Comment列 -> EditableCell (可编辑, 无验证)
 ```
 
-### 数据流架构
+**实际组件结构说明：**
+- 未拆分独立 Toolbar/TableHeader 子组件，所有 UI 集中在 TableEditor 中
+- EditableCell 和 DataTypeCell 为独立的渲染单元格组件
+- 使用 useColumns Hook 生成 antd Table 列配置
+- 使用 useTableActions Hook 封装所有操作逻辑
+- 使用 useEditingState Hook 管理编辑状态
+
+### 数据流架构（实际实现）
 
 ```
 用户操作 (User Action)
     ↓
 组件事件处理 (Component Event Handler)
     ↓
-调用 Store Action (Zustand Store)
+useTableActions Hook (验证 + 操作)
     ↓
-执行验证逻辑 (Validation Logic)
+validators.ts (纯函数验证)
     ↓
-更新状态 (State Update)
+Zustand Store: updateRow/addRow/deleteRow (状态更新)
     ↓
-组件重新渲染 (Component Re-render)
+Store 自动调用 saveToStorage → LocalStorageRepository.saveAll()
+    ↓
+组件重新渲染 (精确selector订阅，避免不必要渲染)
 ```
+
+**关键设计决策：**
+- `editingValues` 使用 `useRef` 而非 `useState`，避免每次击键重建 columns 导致无限重渲染
+- `columns` 的 `useMemo` 依赖中不包含 `editingValues`，通过 `forceUpdate` 触发轻量重渲染
+- Zustand Store 中的 `addRow`/`updateRow`/`deleteRow` 操作完成后自动调用 `saveToStorage()`
 
 ### 验证流程
 
@@ -571,87 +583,72 @@ JavaScript的Number类型基于IEEE 754双精度浮点数，可以精确表示±
 
 ---
 
-## 项目目录结构设计
+## 项目目录结构设计（实际）
 
 ```
-table-editor/
+task_table/
 ├── public/                    # 静态资源
-│   └── favicon.ico
+│   ├── vite.svg
+│   └── react.svg
 ├── src/                      # 源代码
+│   ├── assets/               # 静态资源（图片等）
 │   ├── components/           # UI组件
-│   │   ├── TableEditor/     # 主表格编辑器组件
-│   │   ├── Table/           # 表格组件
-│   │   ├── Toolbar/         # 工具栏组件
-│   │   └── CellRenderers/   # 单元格渲染器
+│   │   ├── common/          # 通用组件（预留，当前为空）
+│   │   └── TableEditor/     # 主表格编辑器组件
+│   │       ├── index.tsx     # TableEditor主组件
+│   │       ├── index.less    # TableEditor样式（Less）
+│   │       ├── columns.tsx   # useColumns Hook - 表格列配置
+│   │       └── components/   # 子组件
+│   │           ├── EditableCell.tsx  # 可编辑文本输入单元格
+│   │           └── DataTypeCell.tsx  # 数据类型下拉选择单元格
 │   ├── hooks/               # 自定义Hooks
-│   │   ├── useTableEditor.ts
-│   │   ├── useValidation.ts
-│   │   ├── useRowSelection.ts
-│   │   └── usePersistence.ts # 数据持久化Hook
+│   │   ├── useEditingState.ts  # 编辑状态管理
+│   │   ├── useTableActions.ts  # 表格操作封装
+│   │   └── usePersistence.ts   # 数据持久化Hook（独立版本，当前未使用）
 │   ├── store/               # Zustand状态管理
-│   │   ├── tableStore.ts
-│   │   └── types.ts
-│   ├── repository/          # 数据持久化适配层
-│   │   ├── IVariableRepository.ts # ✅ 实际定义
-│   │   ├── LocalStorageRepository.ts # ✅ 实际实现
-│   │   ├── IndexedDBRepository.ts # ⚠️ 接口预留（不实现）
-│   │   ├── RepositoryFactory.ts # ✅ 实际实现
-│   │   └── README.md        # ✅ 架构说明文档
-│   ├── utils/               # 工具函数
-│   │   ├── validators.ts    # ✅ INT验证实际实现
-│   │   ├── constants.ts    # ✅ INT范围常量
-│   │   └── helpers.ts
+│   │   └── tableStore.ts     # 表格状态Store（含持久化逻辑）
+│   ├── repository/          # 数据持久化适配层（Repository Pattern）
+│   │   ├── LocalStorageRepository.ts  # localStorage实现
+│   │   ├── IndexedDBRepository.ts     # IndexedDB接口预留
+│   │   ├── RepositoryFactory.ts       # 工厂模式
+│   │   └── README.md                  # 架构说明文档
 │   ├── types/               # TypeScript类型定义
-│   │   ├── variable.ts
-│   │   ├── validation.ts
-│   │   ├── table.ts
-│   │   └ repository.ts     # ✅ Repository类型定义
-│   ├── App.tsx
-│   ├── main.tsx
-│   └── index.css
+│   │   ├── variable.ts       # Variable接口、DataType类型
+│   │   ├── validation.ts     # ValidationError、ValidationResult
+│   │   └── repository.ts     # IVariableRepository接口、StorageType
+│   ├── utils/               # 工具函数
+│   │   ├── validators.ts     # 纯函数验证逻辑
+│   │   └── constants.ts      # 全局常量（INT范围、存储键等）
+│   ├── App.tsx               # 应用根组件（ConfigProvider + TableEditor）
+│   ├── App.less              # 应用容器样式（Less）
+│   ├── main.tsx              # React入口（StrictMode）
+│   └── index.less            # 全局样式/CSS变量（Less）
 ├── tests/                    # 测试文件
-│   ├── unit/
-│   │   ├── validators.test.ts
-│   │   ├── tableStore.test.ts
-│   │   └ LocalStorageRepository.test.ts
-│   ├── components/
-│   └ integration/
-│       └ tableOperations.test.tsx
-│       └ persistenceFlow.test.tsx
-├── package.json
-├── tsconfig.json
-├── vite.config.ts
-├── vitest.config.ts
-└ README.md
+│   └── *.test.ts             # 测试用例
+├── doc/                      # 项目文档
+├── .trae/specs/              # Spec设计文档
+├── package.json              # 项目配置和依赖
+├── tsconfig.json             # TypeScript配置
+├── tsconfig.app.json         # 应用TypeScript配置
+├── tsconfig.node.json        # Node端TypeScript配置
+├── vite.config.ts            # Vite构建配置
+├── eslint.config.js          # ESLint配置
+└── README.md                 # 项目说明
 ```
 
 ### 目录职责说明
 
-| 目录/文件 | 实施阶段 | 状态 | 说明 |
-|----------|---------|------|------|
-| `components/` | Task 3-5 | ✅ 实际实现 | React组件 |
-| `hooks/` | Task 2-5 | ✅ 实际实现 | 可复用逻辑，包括数据持久化Hook |
-| `store/` | Task 2 | ✅ 实际实现 | Zustand状态管理 |
-| `repository/` | Task 2 | ✅ 架构展示 | **展示Repository Pattern设计能力** |
-| `utils/validators.ts` | Task 4 | ✅ 实际实现 | INT验证具体代码 |
-| `utils/constants.ts` | Task 1 | ✅ 实际实现 | INT范围常量（INT_MIN、INT_MAX） |
-
-**repository目录详细说明：**
-
-| 文件 | 状态 | 实施说明 |
-|------|------|---------|
-| `IVariableRepository.ts` | ✅ 实际定义 | 定义接口，展示架构设计 |
-| `LocalStorageRepository.ts` | ✅ 实际实现 | localStorage实现，满足demo需求 |
-| `IndexedDBRepository.ts` | ⚠️ 接口预留 | **只定义接口签名，不实现代码** |
-| `RepositoryFactory.ts` | ✅ 实际实现 | 返回localStorage实例 |
-| `README.md` | ✅ 实际创建 | 说明架构设计思路和扩展方向 |
-
-**面试demo展示策略：**
-- repository目录展示Repository Pattern架构设计能力
-- 实际实现localStorage，代码简洁高效
-- IndexedDB预留接口定义（只有类型签名，无实现代码）
-- repository/README.md文档说明扩展方向
-- 整体代码量适中，不分散核心功能开发精力
+| 目录/文件 | 状态 | 说明 |
+|----------|------|------|
+| `components/TableEditor/` | ✅ 实际实现 | 主表格组件，Card包裹，包含标题/工具栏/Table |
+| `components/TableEditor/components/` | ✅ 实际实现 | EditableCell（可编辑文本）、DataTypeCell（下拉选择） |
+| `hooks/useEditingState.ts` | ✅ 实际实现 | 管理 editingCell（行/列）和 tempValues（临时编辑值） |
+| `hooks/useTableActions.ts` | ✅ 实际实现 | 封装所有操作：验证保存、键盘处理、添加删除 |
+| `hooks/usePersistence.ts` | ⚠️ 预留（未使用） | 独立持久化Hook，实际由Store内置方法替代 |
+| `store/tableStore.ts` | ✅ 实际实现 | Zustand Store：variables、errors、CRUD操作 + 自动持久化 |
+| `repository/` | ✅ 架构展示 | Repository Pattern，展示设计能力 |
+| `utils/validators.ts` | ✅ 实际实现 | 纯函数：validateVariableName、validateBoolDefaultValue、validateIntDefaultValue |
+| `utils/constants.ts` | ✅ 实际实现 | INT_MIN/MAX、STORAGE_KEYS、数据量阈值、默认变量模板 |
 
 ---
 

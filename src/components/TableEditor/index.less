@@ -1,0 +1,273 @@
+/* TableEditor 样式 - 工业化设计 */
+
+.table-editor-card {
+  display: flex;
+  flex-direction: column;
+  margin: 16px auto;
+  max-width: 1400px;
+  width: 100%;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+
+  .ant-card-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
+.table-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.table-description {
+  color: #666;
+  font-size: 13px;
+}
+
+.table-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.toolbar-info {
+  color: #999;
+  font-size: 13px;
+}
+
+/* 表格样式优化 */
+.table-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ant-table-wrapper {
+  height: 100%;
+}
+
+/* 编辑态单元格样式 */
+.editable-cell {
+  position: relative;
+  cursor: pointer;
+
+  &:hover {
+    border-color: #40a9ff;
+  }
+}
+
+/* 表头样式 */
+.ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 600;
+  border-bottom: 2px solid #e8e8e8;
+  padding: 8px 8px;
+}
+
+/* 表格行样式 */
+.ant-table-tbody > tr {
+  transition: all 0.2s ease;
+
+  &:hover > td {
+    background: #f5f5f5;
+    cursor: pointer;
+  }
+
+  &.ant-table-row-selected > td {
+    background: #e6f7ff !important;
+  }
+
+  &.ant-table-row-selected:hover > td {
+    background: #bae7ff !important;
+  }
+
+  > td {
+    border-bottom: 1px solid #e8e8e8;
+    transition: background-color 0.2s ease;
+    padding: 6px 8px;
+  }
+}
+
+/* 输入框样式 */
+.ant-input {
+  border-radius: 4px;
+
+  &:focus,
+  &-focused {
+    border-color: #40a9ff;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  }
+
+  &-status-error {
+    border-color: #ff4d4f;
+    background-color: #fff1f0;
+
+    &:focus {
+      border-color: #ff7875;
+      box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
+    }
+  }
+}
+
+/* 错误单元格样式 */
+.error-cell {
+  background-color: #fff1f0 !important;
+  border-color: #ff4d4f !important;
+  transition: all 0.3s ease;
+
+  &:focus {
+    background-color: #fff1f0 !important;
+    border-color: #ff7875 !important;
+    box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2) !important;
+  }
+
+  &:hover {
+    background-color: #ffe7e6 !important;
+  }
+}
+
+/* 按钮样式 */
+.ant-btn-primary {
+  background: #1890ff;
+  border-color: #1890ff;
+
+  &:hover {
+    background: #40a9ff;
+    border-color: #40a9ff;
+  }
+}
+
+/* Select样式 */
+.ant-select {
+  border-radius: 4px;
+}
+
+.ant-select-selector {
+  border-radius: 4px !important;
+}
+
+/* 行选择样式 */
+.ant-table-selection-column {
+  width: 50px;
+}
+
+.ant-radio-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+/* 滚动条样式优化 */
+.ant-table-body {
+  &::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 5px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 5px;
+    transition: background 0.3s ease;
+
+    &:hover {
+      background: #a8a8a8;
+    }
+  }
+
+  &::-webkit-scrollbar-corner {
+    background: #f1f1f1;
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .table-editor-card {
+    margin: 12px;
+  }
+
+  .ant-table {
+    font-size: 13px;
+  }
+
+  .ant-input {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 992px) {
+  .table-editor-card {
+    margin: 8px;
+  }
+
+  .ant-table {
+    font-size: 12px;
+  }
+
+  .ant-input {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .table-editor-card {
+    margin: 8px;
+  }
+
+  .table-toolbar {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .toolbar-info {
+    text-align: center;
+    font-size: 12px;
+  }
+
+  .ant-table {
+    font-size: 11px;
+  }
+
+  .ant-input {
+    font-size: 11px;
+  }
+
+  .table-description {
+    font-size: 12px;
+  }
+
+  /* 移动端调整表格滚动 */
+  .ant-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .ant-table {
+    min-width: 600px;
+  }
+}
+
+@media (max-width: 576px) {
+  .table-editor-card {
+    margin: 4px;
+  }
+
+  .ant-table {
+    font-size: 10px;
+  }
+
+  .ant-input {
+    font-size: 10px;
+  }
+}

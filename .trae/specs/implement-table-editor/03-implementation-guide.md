@@ -427,80 +427,69 @@ export function validateIntDefaultValue(value: string): ValidationResult {
 
 ## 性能优化建议
 
-### 基础React性能优化（推荐实施）
+### 基础React性能优化（已实施）
 
-- **使用React.memo优化组件**
+- **使用useMemo缓存columns配置**
   ```typescript
-  const TableRow = React.memo(({ variable, onUpdate }) => {
-    // 表格行组件实现
-  }, (prevProps, nextProps) => {
-    // 自定义比较逻辑
-    return prevProps.variable.id === nextProps.variable.id &&
-           prevProps.variable.name === nextProps.variable.name;
-  });
+  // columns.tsx - useColumns Hook
+  return useMemo(() => [/* 5列配置 */], [
+    editingCell, errors, tempValues, startEditing, updateTempValue,
+    validateAndSaveName, validateAndSaveDefaultValue, saveComment,
+    saveDataType, handleKeyDown, cancelEditing,
+  ]);
   ```
 
-- **使用useMemo缓存计算**
-  ```typescript
-  // 缓存计算结果
-  const nextIndex = useMemo(() => {
-    return variables.length > 0
-      ? Math.max(...variables.map(v => v.index)) + 1
-      : 1;
-  }, [variables]);
-  ```
+- **关键优化：编辑状态使用useRef而非useState**
+  - `editingValues` 原本用 `useState<Map>`，每次击键创建新Map实例，导致 `useMemo` 重新计算columns，造成无限重渲染/卡死
+  - 改为 `useRef`（`editingValuesRef`），通过 `forceUpdate` state 触发轻量重渲染
+  - `columns` 的 `useMemo` 依赖中移除了 `editingValues`
 
 - **使用useCallback缓存函数**
   ```typescript
-  // 避免每次渲染创建新函数
-  const handleAddRow = useCallback(() => {
-    addRow();
-  }, [addRow]);
-
-  const handleUpdateCell = useCallback((index: number, field: string, value: any) => {
-    updateCell(index, field, value);
-  }, [updateCell]);
+  const handleAddRow = useCallback(async () => { await addRow(); }, [addRow]);
   ```
 
-### antd Table性能特性
+### 表格滚动高度动态计算（已实施）
 
-antd Table自带性能优化：
-- 自动虚拟滚动支持（如果需要）
-- 内置防抖和节流机制
-- 对于几百条数据的场景性能良好
-- **面试demo无需额外优化**
+使用 `ResizeObserver` + `useLayoutEffect` 动态计算表格可用高度：
 
-### 状态订阅优化
+```typescript
+const wrapperRef = useRef<HTMLDivElement>(null);
+const [tableScrollY, setTableScrollY] = useState(400);
+
+useLayoutEffect(() => {
+  const calcHeight = () => {
+    if (!wrapperRef.current) return;
+    const wrapperRect = wrapperRef.current.getBoundingClientRect();
+    const available = wrapperRect.height - 50; // 减去表头高度
+    if (available > 0) setTableScrollY(available);
+  };
+  calcHeight();
+  const observer = new ResizeObserver(calcHeight);
+  if (wrapperRef.current) observer.observe(wrapperRef.current);
+  window.addEventListener('resize', calcHeight);
+  return () => { observer.disconnect(); window.removeEventListener('resize', calcHeight); };
+}, []);
+```
+
+**说明：** `scroll.y` 只作用于 `.ant-table-body`（数据区域），表头 `.ant-table-header` 固定不滚动，因此需减去表头高度（约50px）。
+
+### 状态订阅优化（已实施）
 
 - **精确订阅状态**（避免不必要的渲染）
   ```typescript
-  // 只订阅需要的状态
-  const variables = useTableStore(state => state.variables);
-  const errors = useTableStore(state => state.errors);
-  
-  // 不要订阅整个store
-  // const store = useTableStore(); // 不推荐
+  const variables = useTableStore((state) => state.variables);
+  const selectedRowIndex = useTableStore((state) => state.selectedRowIndex);
+  const errors = useTableStore((state) => state.errors);
   ```
 
-- **使用Zustand的selector**
-  ```typescript
-  // Zustand自动优化selector
-  const selectedRow = useTableStore(
-    state => state.variables[state.selectedRowIndex]
-  );
-  ```
+### antd Table 虚拟列表
 
-### 面试Demo性能重点
-
-**实际场景数据量**：
-- TIA Portal表格通常几十到几百条变量
-- antd Table性能足够，无需特殊优化
-
-**面试展示重点**：
-- ✅ 展示React性能优化意识（memo、useMemo、useCallback）
-- ✅ 说明antd Table自带性能优化
-- ✅ 简单说明大数据场景的虚拟滚动思路（口述即可）
-- ❌ 不需要实际实现复杂的性能优化代码
+Ant Design v5+ 的 Table 支持 `virtual` 属性开启虚拟列表：
+```tsx
+<Table virtual scroll={{ x: 2000, y: 500 }} {...otherProps} />
+```
+当前项目未开启虚拟列表，数据量在数百行以内时普通模式性能足够。
 
 ---
 

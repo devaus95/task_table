@@ -25,13 +25,6 @@ repository/
 - IndexedDBRepository - 只定义接口签名，无实现代码
 - 文档说明未来扩展方向（大数据量、远程API）
 
-## 面试Demo展示要点
-
-1. **架构设计能力** - Repository Pattern解耦
-2. **工厂模式** - 灵活切换存储策略
-3. **扩展性思考** - 预留IndexedDB接口
-4. **简洁高效** - localStorage实现，代码量适中
-
 ## 未来扩展方向
 
 1. **IndexedDB实现** - 大数据量场景（>1000条变量）

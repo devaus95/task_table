@@ -1,5 +1,6 @@
 /**
  * 数据持久化Hook
+ * 手动触发持久化（在save时调用）
  */
 
 import { useEffect, useCallback } from 'react';
@@ -8,7 +9,7 @@ import { RepositoryFactory } from '../repository/RepositoryFactory';
 
 /**
  * 数据持久化Hook
- * 自动同步表格数据到localStorage
+ * 手动触发保存到localStorage
  */
 export function usePersistence() {
   const variables = useTableStore((state) => state.variables);
@@ -33,21 +34,14 @@ export function usePersistence() {
     loadVariables();
   }, [repository, setVariables]);
 
-  // 保存数据（variables变化时）
-  useEffect(() => {
-    const saveVariables = async () => {
-      try {
-        if (variables.length > 0) {
-          await repository.saveAll(variables);
-        }
-      } catch (error) {
-        console.error('Failed to save variables:', error);
-      }
-    };
-
-    // 使用防抖避免频繁保存
-    const timeoutId = setTimeout(saveVariables, 500);
-    return () => clearTimeout(timeoutId);
+  // 手动保存数据到localStorage
+  const saveToStorage = useCallback(async () => {
+    try {
+      await repository.saveAll(variables);
+      console.log('Data saved to localStorage successfully');
+    } catch (error) {
+      console.error('Failed to save variables:', error);
+    }
   }, [variables, repository]);
 
   // 手动清除数据
@@ -61,6 +55,7 @@ export function usePersistence() {
   }, [repository, setVariables]);
 
   return {
+    saveToStorage,
     clearData,
     repository,
   };
