@@ -3,9 +3,9 @@
  * 实现变量表编辑功能
  */
 
-import React, { useCallback, useMemo } from 'react';
-import { Table, Button, Space, Input, Select, message } from 'antd';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import React, { useCallback, useMemo, useState } from 'react';
+import { Table, Button, Space, Input, Select, message, Typography, Card, Divider } from 'antd';
+import { PlusOutlined, DeleteOutlined, SaveOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Variable } from '../../types/variable';
 import { useTableStore } from '../../store/tableStore';
@@ -15,6 +15,15 @@ import type { SimpleValidationResult } from '../../types/validation';
 import './index.css';
 
 const { Option } = Select;
+const { Title } = Typography;
+
+/**
+ * 编辑状态接口
+ */
+interface EditingValues {
+  name?: string;
+  defaultValue?: string;
+}
 
 /**
  * TableEditor 组件
@@ -33,11 +42,33 @@ export const TableEditor: React.FC = () => {
   // 使用持久化Hook
   usePersistence();
 
+  // 临时编辑状态（存储用户正在输入的值）
+  const [editingValues, setEditingValues] = useState<Map<number, EditingValues>>(new Map());
+
   /**
-   * 验证并更新变量名称
+   * 开始编辑：存储临时值
    */
-  const handleNameChange = useCallback(
-    (index: number, newName: string) => {
+  const startEditing = useCallback(
+    (index: number, field: 'name' | 'defaultValue', value: string) => {
+      setEditingValues((prev) => {
+        const newMap = new Map(prev);
+        const current = newMap.get(index) || {};
+        newMap.set(index, { ...current, [field]: value });
+        return newMap;
+      });
+    },
+    []
+  );
+
+  /**
+   * 验证并更新变量名称（onBlur时）
+   */
+  const validateAndUpdateName = useCallback(
+    (index: number) => {
+      const editingValue = editingValues.get(index);
+      if (!editingValue || editingValue.name === undefined) return;
+
+      const newName = editingValue.name;
       const variable = variables.find((v) => v.index === index);
       if (!variable) return;
 
@@ -55,7 +86,7 @@ export const TableEditor: React.FC = () => {
           rowIndex: index,
         });
         message.error(result.error);
-        // 恢复原值
+        // 不更新，保留编辑状态让用户修改
         return;
       }
 
@@ -64,33 +95,28 @@ export const TableEditor: React.FC = () => {
 
       // 更新名称
       updateRow(index, { name: newName.trim() });
+
+      // 清除编辑状态
+      setEditingValues((prev) => {
+        const newMap = new Map(prev);
+        newMap.delete(index);
+        return newMap;
+      });
+
+      message.success('Name updated');
     },
-    [variables, updateRow, setError]
+    [variables, editingValues, updateRow, setError]
   );
 
   /**
-   * 验证并更新数据类型
+   * 验证并更新默认值（onBlur时）
    */
-  const handleDataTypeChange = useCallback(
-    (index: number, newDataType: 'BOOL' | 'INT') => {
-      const variable = variables.find((v) => v.index === index);
-      if (!variable) return;
+  const validateAndUpdateDefaultValue = useCallback(
+    (index: number) => {
+      const editingValue = editingValues.get(index);
+      if (!editingValue || editingValue.defaultValue === undefined) return;
 
-      // 更新数据类型和默认值
-      const newDefaultValue = newDataType === 'BOOL' ? 'TRUE' : '0';
-      updateRow(index, { dataType: newDataType, defaultValue: newDefaultValue });
-
-      // 清除默认值的错误
-      setError(`defaultValue-${index}`, null);
-    },
-    [variables, updateRow, setError]
-  );
-
-  /**
-   * 验证并更新默认值
-   */
-  const handleDefaultValueChange = useCallback(
-    (index: number, newValue: string) => {
+      const newValue = editingValue.defaultValue;
       const variable = variables.find((v) => v.index === index);
       if (!variable) return;
 
@@ -105,6 +131,7 @@ export const TableEditor: React.FC = () => {
           rowIndex: index,
         });
         message.error(result.error);
+        // 不更新，保留编辑状态让用户修改
         return;
       }
 
@@ -115,12 +142,41 @@ export const TableEditor: React.FC = () => {
       updateRow(index, {
         defaultValue: result.normalized || newValue.trim(),
       });
+
+      // 清除编辑状态
+      setEditingValues((prev) => {
+        const newMap = new Map(prev);
+        newMap.delete(index);
+        return newMap;
+      });
+
+      message.success('Default value updated');
+    },
+    [variables, editingValues, updateRow, setError]
+  );
+
+  /**
+   * 更新数据类型
+   */
+  const handleDataTypeChange = useCallback(
+    (index: number, newDataType: 'BOOL' | 'INT') => {
+      const variable = variables.find((v) => v.index === index);
+      if (!variable) return;
+
+      // 更新数据类型和默认值
+      const newDefaultValue = newDataType === 'BOOL' ? 'TRUE' : '0';
+      updateRow(index, { dataType: newDataType, defaultValue: newDefaultValue });
+
+      // 清除默认值的错误
+      setError(`defaultValue-${index}`, null);
+
+      message.success('Data type updated');
     },
     [variables, updateRow, setError]
   );
 
   /**
-   * 更新注释
+   * 更新注释（直接更新，无需验证）
    */
   const handleCommentChange = useCallback(
     (index: number, newComment: string) => {
@@ -147,15 +203,22 @@ export const TableEditor: React.FC = () => {
         dataIndex: 'name',
         key: 'name',
         width: 200,
-        render: (text: string, record: Variable) => (
-          <Input
-            value={text}
-            placeholder="Enter variable name"
-            onChange={(e) => handleNameChange(record.index, e.target.value)}
-            onBlur={(e) => handleNameChange(record.index, e.target.value)}
-            status={errors.has(`name-${record.index}`) ? 'error' : undefined}
-          />
-        ),
+        render: (text: string, record: Variable) => {
+          const editingValue = editingValues.get(record.index);
+          const displayValue = editingValue?.name !== undefined ? editingValue.name : text;
+          const hasError = errors.has(`name-${record.index}`);
+
+          return (
+            <Input
+              value={displayValue}
+              placeholder="Enter variable name"
+              onChange={(e) => startEditing(record.index, 'name', e.target.value)}
+              onBlur={() => validateAndUpdateName(record.index)}
+              status={hasError ? 'error' : undefined}
+              autoFocus={editingValue?.name !== undefined}
+            />
+          );
+        },
       },
       {
         title: 'Data Type',
@@ -178,15 +241,22 @@ export const TableEditor: React.FC = () => {
         dataIndex: 'defaultValue',
         key: 'defaultValue',
         width: 150,
-        render: (text: string, record: Variable) => (
-          <Input
-            value={text}
-            placeholder={record.dataType === 'BOOL' ? 'true/false' : 'Enter integer'}
-            onChange={(e) => handleDefaultValueChange(record.index, e.target.value)}
-            onBlur={(e) => handleDefaultValueChange(record.index, e.target.value)}
-            status={errors.has(`defaultValue-${record.index}`) ? 'error' : undefined}
-          />
-        ),
+        render: (text: string, record: Variable) => {
+          const editingValue = editingValues.get(record.index);
+          const displayValue =
+            editingValue?.defaultValue !== undefined ? editingValue.defaultValue : text;
+          const hasError = errors.has(`defaultValue-${record.index}`);
+
+          return (
+            <Input
+              value={displayValue}
+              placeholder={record.dataType === 'BOOL' ? 'true/false' : 'Enter integer'}
+              onChange={(e) => startEditing(record.index, 'defaultValue', e.target.value)}
+              onBlur={() => validateAndUpdateDefaultValue(record.index)}
+              status={hasError ? 'error' : undefined}
+            />
+          );
+        },
       },
       {
         title: 'Comment',
@@ -202,7 +272,15 @@ export const TableEditor: React.FC = () => {
         ),
       },
     ],
-    [errors, handleNameChange, handleDataTypeChange, handleDefaultValueChange, handleCommentChange]
+    [
+      editingValues,
+      errors,
+      startEditing,
+      validateAndUpdateName,
+      validateAndUpdateDefaultValue,
+      handleDataTypeChange,
+      handleCommentChange,
+    ]
   );
 
   /**
@@ -221,6 +299,7 @@ export const TableEditor: React.FC = () => {
    */
   const handleAddRow = useCallback(() => {
     addRow();
+    message.success('New row added');
   }, [addRow]);
 
   /**
@@ -236,10 +315,23 @@ export const TableEditor: React.FC = () => {
   }, [selectedRowIndex, deleteSelectedRow]);
 
   return (
-    <div className="table-editor">
+    <Card className="table-editor-card">
+      {/* 表格标题 */}
+      <div className="table-header">
+        <Title level={3} style={{ margin: 0 }}>
+          Variable Table Editor
+        </Title>
+        <div className="table-description">
+          Edit and manage variables for TIA Portal configuration
+        </div>
+      </div>
+
+      <Divider />
+
+      {/* 操作按钮区域 */}
       <div className="table-toolbar">
-        <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAddRow}>
+        <Space size="middle">
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAddRow} size="large">
             Add Row
           </Button>
           <Button
@@ -247,12 +339,26 @@ export const TableEditor: React.FC = () => {
             icon={<DeleteOutlined />}
             onClick={handleDeleteRow}
             disabled={selectedRowIndex === null}
+            size="large"
           >
             Delete Row
           </Button>
+          <Button
+            icon={<SaveOutlined />}
+            onClick={() => message.success('Data automatically saved to localStorage')}
+            size="large"
+          >
+            Auto Saved
+          </Button>
         </Space>
+        <div className="toolbar-info">
+          <span>Total: {variables.length} variables</span>
+        </div>
       </div>
 
+      <Divider />
+
+      {/* 表格区域 */}
       <Table<Variable>
         columns={columns}
         dataSource={variables}
@@ -263,8 +369,10 @@ export const TableEditor: React.FC = () => {
         locale={{
           emptyText: 'No data, click "Add Row" to add variables',
         }}
+        bordered
+        size="middle"
       />
-    </div>
+    </Card>
   );
 };
 
