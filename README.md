@@ -23,6 +23,10 @@ A simplified variable table editor inspired by TIA Portal, supporting add, delet
 | Testing | Vitest 4 + Testing Library |
 | Persistence | localStorage (Repository Pattern, IndexedDB reserved) |
 
+## Demo
+
+Live demo: [https://devaus95.github.io/task_table/](https://devaus95.github.io/task_table/)
+
 ## Getting Started
 
 ```bash

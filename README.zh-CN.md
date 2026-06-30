@@ -23,6 +23,10 @@
 | 测试 | Vitest 4 + Testing Library |
 | 持久化 | localStorage（仓储模式，预留 IndexedDB 接口） |
 
+## 在线演示
+
+在线地址：[https://devaus95.github.io/task_table/](https://devaus95.github.io/task_table/)
+
 ## 快速开始
 
 ```bash
