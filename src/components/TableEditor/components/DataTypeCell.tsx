@@ -10,7 +10,7 @@ import { Select } from 'antd';
  * 数据类型单元格属性接口
  */
 export interface DataTypeCellProps {
-  value: 'BOOL' | 'INT';
+  value: '' | 'BOOL' | 'INT';
   isEditing: boolean;
   onChange: (value: 'BOOL' | 'INT') => void;
   onBlur: () => void;
@@ -32,7 +32,11 @@ export const DataTypeCell: React.FC<DataTypeCellProps> = ({
     return (
       <Select
         value={value}
-        onChange={(value) => onChange(value as 'BOOL' | 'INT')}
+        onChange={(value) => {
+          if (value === 'BOOL' || value === 'INT') {
+            onChange(value);
+          }
+        }}
         onBlur={onBlur}
         style={{ width: '100%' }}
         size="small"
@@ -52,7 +56,7 @@ export const DataTypeCell: React.FC<DataTypeCellProps> = ({
       onDoubleClick={onDoubleClick}
       style={{ cursor: 'pointer', minHeight: '24px', lineHeight: '24px' }}
     >
-      {value}
+      {value || <span style={{ color: '#bfbfbf' }}>Select data type</span>}
     </div>
   );
 };

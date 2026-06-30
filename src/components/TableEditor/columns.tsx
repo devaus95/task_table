@@ -93,7 +93,7 @@ export const useColumns = (params: ColumnsConfigParams): ColumnsType<Variable> =
         dataIndex: 'dataType',
         key: 'dataType',
         width: 150,
-        render: (text: 'BOOL' | 'INT', record: Variable) => {
+        render: (text: string, record: Variable) => {
           const isEditing =
             editingCell.rowIndex === record.index && editingCell.column === 'dataType';
 

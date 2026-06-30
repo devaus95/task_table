@@ -2,7 +2,7 @@
  * 变量数据类型定义
  */
 
-export type DataType = 'BOOL' | 'INT';
+export type DataType = '' | 'BOOL' | 'INT';
 
 /**
  * 变量定义接口

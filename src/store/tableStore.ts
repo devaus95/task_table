@@ -72,7 +72,7 @@ export const useTableStore = create<TableState>((set, get) => ({
       id: generateId(),
       index: getNextIndex(),
       name: '',
-      dataType: 'INT', // 默认数据类型为INT，用户可以修改
+      dataType: '', // 默认为空，用户需要选择数据类型
       defaultValue: '', // 默认值为空，用户需要填写
       comment: '',
       updatedAt: new Date(),
@@ -85,7 +85,12 @@ export const useTableStore = create<TableState>((set, get) => ({
 
   deleteRow: async (index) => {
     const { variables, saveToStorage } = get();
-    const newVariables = variables.filter((v) => v.index !== index);
+    // 过滤掉被删除的行，并重新计算后续行的Index
+    const filtered = variables.filter((v) => v.index !== index);
+    const newVariables = filtered.map((v, i) => ({
+      ...v,
+      index: i + 1,
+    }));
     set({ variables: newVariables });
     // 保存到localStorage
     await saveToStorage();

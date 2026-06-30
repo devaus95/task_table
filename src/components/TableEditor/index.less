@@ -191,6 +191,11 @@
   }
 }
 
+/* 修复 bordered 表格在 scroll.y 模式下底部边框丢失 */
+.ant-table-container {
+  border-bottom: 1px solid #f0f0f0;
+}
+
 /* 响应式设计 */
 @media (max-width: 1200px) {
   .table-editor-card {

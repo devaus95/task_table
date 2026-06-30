@@ -101,7 +101,7 @@ export function validateVariableName(
  * @returns 验证结果
  */
 export function validateDefaultValue(
-  dataType: 'BOOL' | 'INT',
+  dataType: '' | 'BOOL' | 'INT',
   defaultValue: string
 ): SimpleValidationResult & { normalized?: string } {
   if (dataType === 'BOOL') {
