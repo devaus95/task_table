@@ -125,6 +125,7 @@ export const useColumns = (params: ColumnsConfigParams): ColumnsType<Variable> =
             editingCell.rowIndex === record.index && editingCell.column === 'defaultValue';
           const error = errors.get(`defaultValue-${record.index}`) || null;
           const tempValue = tempValues[`defaultValue-${record.index}`];
+          const hasDataType = !!record.dataType;
 
           return (
             <EditableCell
@@ -132,10 +133,9 @@ export const useColumns = (params: ColumnsConfigParams): ColumnsType<Variable> =
               tempValue={tempValue}
               isEditing={isEditing}
               error={error}
-              placeholder={record.dataType === 'BOOL' ? 'true/false' : 'Enter integer'}
+              placeholder={!hasDataType ? 'Select data type first' : record.dataType === 'BOOL' ? 'true/false' : 'Enter integer'}
               onChange={(value) => updateTempValue(`defaultValue-${record.index}`, value)}
               onBlur={() => {
-                // 如果当前已有错误，blur时清除错误并退出编辑
                 if (error) {
                   cancelEditing();
                 } else {
@@ -143,7 +143,11 @@ export const useColumns = (params: ColumnsConfigParams): ColumnsType<Variable> =
                 }
               }}
               onKeyDown={(e) => handleKeyDown(e, record.index, 'defaultValue')}
-              onClick={() => startEditing(record.index, 'defaultValue')}
+              onClick={() => {
+                if (hasDataType) {
+                  startEditing(record.index, 'defaultValue');
+                }
+              }}
             />
           );
         },

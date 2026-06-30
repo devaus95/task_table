@@ -33,35 +33,41 @@ export const TableEditor: React.FC = () => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [tableScrollY, setTableScrollY] = useState<number | undefined>(undefined);
 
+  const calcScrollY = useCallback(() => {
+    if (!wrapperRef.current) return;
+    const wrapperRect = wrapperRef.current.getBoundingClientRect();
+    const available = wrapperRect.height;
+    if (available <= 0) return;
+
+    // antd size="small" 表头约 39px，每行约 39px
+    const HEADER_H = 39;
+    const ROW_H = 39;
+    const estimatedContentH = HEADER_H + variables.length * ROW_H;
+
+    if (estimatedContentH > available) {
+      // 内容超出，设置 scroll.y = wrapper高度 - 表头高度
+      setTableScrollY(available - HEADER_H);
+    } else {
+      // 内容不超出，不设置 scroll.y，表格自然撑开
+      setTableScrollY(undefined);
+    }
+  }, [variables.length]);
+
   useLayoutEffect(() => {
-    const calcHeight = () => {
-      if (!wrapperRef.current) return;
-      const wrapperRect = wrapperRef.current.getBoundingClientRect();
-      const available = wrapperRect.height - 8; // 预留少量padding
-      if (available <= 0) return;
-
-      // 计算表格实际内容高度（表头+数据行）
-      const thead = wrapperRef.current.querySelector('.ant-table-thead') as HTMLElement | null;
-      const tbody = wrapperRef.current.querySelector('.ant-table-tbody') as HTMLElement | null;
-      const headerHeight = thead?.getBoundingClientRect().height ?? 0;
-      const bodyHeight = tbody?.getBoundingClientRect().height ?? 0;
-
-      // 只有内容超出时才启用滚动
-      if (headerHeight + bodyHeight > available) {
-        setTableScrollY(available);
-      } else {
-        setTableScrollY(undefined);
-      }
-    };
-    calcHeight();
-    const observer = new ResizeObserver(calcHeight);
+    calcScrollY();
+    const observer = new ResizeObserver(() => calcScrollY());
     if (wrapperRef.current) observer.observe(wrapperRef.current);
-    window.addEventListener('resize', calcHeight);
+    window.addEventListener('resize', calcScrollY);
     return () => {
       observer.disconnect();
-      window.removeEventListener('resize', calcHeight);
+      window.removeEventListener('resize', calcScrollY);
     };
-  }, []);
+  }, [calcScrollY]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => calcScrollY(), 0);
+    return () => clearTimeout(timer);
+  }, [variables.length, calcScrollY]);
 
   // 初始化时从localStorage加载数据
   useEffect(() => {
@@ -182,7 +188,7 @@ export const TableEditor: React.FC = () => {
       </div>
 
       {/* 表格区域 */}
-      <div ref={wrapperRef} className="table-wrapper">
+      <div ref={wrapperRef} className={`table-wrapper${tableScrollY !== undefined ? ' has-scroll' : ''}`}>
         <Table
           columns={columns}
           dataSource={variables}
