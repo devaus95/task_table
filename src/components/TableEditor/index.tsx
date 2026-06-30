@@ -31,14 +31,27 @@ export const TableEditor: React.FC = () => {
 
   // 动态计算表格滚动高度
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const [tableScrollY, setTableScrollY] = useState(400);
+  const [tableScrollY, setTableScrollY] = useState<number | undefined>(undefined);
 
   useLayoutEffect(() => {
     const calcHeight = () => {
       if (!wrapperRef.current) return;
       const wrapperRect = wrapperRef.current.getBoundingClientRect();
-      const available = wrapperRect.height - 50;
-      if (available > 0) setTableScrollY(available);
+      const available = wrapperRect.height - 8; // 预留少量padding
+      if (available <= 0) return;
+
+      // 计算表格实际内容高度（表头+数据行）
+      const thead = wrapperRef.current.querySelector('.ant-table-thead') as HTMLElement | null;
+      const tbody = wrapperRef.current.querySelector('.ant-table-tbody') as HTMLElement | null;
+      const headerHeight = thead?.getBoundingClientRect().height ?? 0;
+      const bodyHeight = tbody?.getBoundingClientRect().height ?? 0;
+
+      // 只有内容超出时才启用滚动
+      if (headerHeight + bodyHeight > available) {
+        setTableScrollY(available);
+      } else {
+        setTableScrollY(undefined);
+      }
     };
     calcHeight();
     const observer = new ResizeObserver(calcHeight);
