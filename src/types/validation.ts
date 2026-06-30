@@ -25,4 +25,5 @@ export interface ValidationResult {
 export interface SimpleValidationResult {
   isValid: boolean;
   error?: string; // 单个错误信息
+  normalized?: string; // 规范化后的值（如 BOOL → TRUE/FALSE, INT → 去前导零）
 }

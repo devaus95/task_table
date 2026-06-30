@@ -129,10 +129,10 @@ export const useTableActions = (params: UseTableActionsParams): UseTableActionsR
         return false;
       }
 
-      // 保存
+      // 保存（优先使用规范化后的值）
       setError(key, null);
       await updateRow(rowIndex, {
-        defaultValue: result.normalized || newValue.trim(),
+        defaultValue: result.normalized ?? newValue.trim(),
       });
 
       // 清除临时值和编辑状态

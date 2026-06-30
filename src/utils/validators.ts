@@ -37,7 +37,10 @@ export function validateIntDefaultValue(value: string): SimpleValidationResult {
     };
   }
 
-  return { isValid: true };
+  // 规范化：去掉前导零，如 "007" → "7"
+  const normalized = String(num);
+
+  return { isValid: true, normalized };
 }
 
 /**
