@@ -20,7 +20,7 @@
 | 状态管理 | Zustand 5 |
 | 样式 | Less |
 | 测试 | Vitest 4 + Testing Library |
-| 持久化 | localStorage（仓储模式，预留 IndexedDB 接口） |
+| 持久化 | localStorage（仓储模式，预留 IndexedDB 接口，默认关闭） |
 
 ## 在线演示
 

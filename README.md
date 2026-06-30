@@ -9,7 +9,7 @@ A simplified variable table editor inspired by TIA Portal, supporting add, delet
 - **Data Validation**: Name uniqueness (case-insensitive), data type format, default value range
 - **Data Types**: BOOL and INT (32-bit signed integer, range -2147483648 ~ 2147483647)
 - **Auto Default Value**: Switching data type auto-updates default value (BOOL → TRUE, INT → 0)
-- **Persistence**: Data auto-saves to localStorage
+- **Persistence**: Repository pattern with localStorage (disabled by default, see Known Issues)
 
 ## Tech Stack
 
@@ -21,7 +21,7 @@ A simplified variable table editor inspired by TIA Portal, supporting add, delet
 | State Management | Zustand 5 |
 | Styling | Less |
 | Testing | Vitest 4 + Testing Library |
-| Persistence | localStorage (Repository Pattern, IndexedDB reserved) |
+| Persistence | localStorage (Repository Pattern, IndexedDB reserved, disabled by default) |
 
 ## Demo
 
