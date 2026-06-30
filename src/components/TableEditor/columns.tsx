@@ -133,7 +133,13 @@ export const useColumns = (params: ColumnsConfigParams): ColumnsType<Variable> =
               tempValue={tempValue}
               isEditing={isEditing}
               error={error}
-              placeholder={!hasDataType ? 'Select data type first' : record.dataType === 'BOOL' ? 'true/false' : 'Enter integer'}
+              placeholder={
+                !hasDataType
+                  ? 'Select data type first'
+                  : record.dataType === 'BOOL'
+                    ? 'true/false'
+                    : 'Enter integer'
+              }
               onChange={(value) => updateTempValue(`defaultValue-${record.index}`, value)}
               onBlur={() => {
                 if (error) {
