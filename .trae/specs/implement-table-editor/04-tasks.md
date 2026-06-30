@@ -30,18 +30,18 @@
     - [x] 定义IndexedDBRepository接口签名（预留接口，不实现）
     - [x] 编写repository/README.md文档说明架构设计
 
-- [ ] Task 3: 表格显示组件实现
-  - [ ] SubTask 3.1: 创建主表格组件（TableEditor）
-  - [ ] SubTask 3.2: 实现表格列定义（Index、Name、Data Type、Default Value、Comment）
-  - [ ] SubTask 3.3: 实现Index列只读和自动生成
-  - [ ] SubTask 3.4: 添加"Add Row"和"Delete Row"按钮
-  - [ ] SubTask 3.5: 实现行选择功能
+- [x] Task 3: 表格显示组件实现
+  - [x] SubTask 3.1: 创建主表格组件（TableEditor）
+  - [x] SubTask 3.2: 实现表格列定义（Index、Name、Data Type、Default Value、Comment）
+  - [x] SubTask 3.3: 实现Index列只读和自动生成
+  - [x] SubTask 3.4: 添加"Add Row"和"Delete Row"按钮
+  - [x] SubTask 3.5: 实现行选择功能
 
-- [ ] Task 4: 数据验证逻辑实现
-  - [ ] SubTask 4.1: 实现名称验证（非空、唯一性检查、不区分大小写）
-  - [ ] SubTask 4.2: 实现BOOL类型默认值验证（接受true/false，显示为TRUE/FALSE）
-  - [ ] SubTask 4.3: 实现INT类型默认值验证（范围检查：-2147483648到2147483647）
-  - [ ] SubTask 4.4: 实现错误提示显示机制
+- [x] Task 4: 数据验证逻辑实现
+  - [x] SubTask 4.1: 实现名称验证（非空、唯一性检查、不区分大小写）
+  - [x] SubTask 4.2: 实现BOOL类型默认值验证（接受true/false，显示为TRUE/FALSE）
+  - [x] SubTask 4.3: 实现INT类型默认值验证（范围检查：-2147483648到2147483647）
+  - [x] SubTask 4.4: 实现错误提示显示机制
 
 - [ ] Task 5: 单元格编辑功能实现
   - [ ] SubTask 5.1: 实现Name单元格编辑（内联编辑或弹窗编辑）
