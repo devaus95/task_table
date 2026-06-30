@@ -84,6 +84,13 @@ export const TableEditor: React.FC = () => {
     clearTempValueAndEditing,
   } = useEditingState();
 
+  // 判断当前编辑的单元格是否有错误
+  const currentEditKey =
+    editingCell.rowIndex !== null && editingCell.column !== null
+      ? `${editingCell.column}-${editingCell.rowIndex}`
+      : null;
+  const hasEditingError = currentEditKey !== null && errors.has(currentEditKey);
+
   // 包装startEditing函数以符合原始接口
   const startEditing = useCallback(
     (rowIndex: number, column: 'name' | 'dataType' | 'defaultValue' | 'comment') => {
@@ -96,6 +103,14 @@ export const TableEditor: React.FC = () => {
   const cancelEditing = useCallback(() => {
     cancelEditingBase(setError);
   }, [cancelEditingBase, setError]);
+
+  // 关闭错误编辑态（由展示态 onMouseDown 触发，不清除临时值避免闪烁）
+  const dismissError = useCallback(() => {
+    if (currentEditKey) {
+      setError(currentEditKey, null);
+    }
+    cancelEditingBase(setError);
+  }, [currentEditKey, setError, cancelEditingBase]);
 
   // 使用表格操作hook
   const {
@@ -124,6 +139,7 @@ export const TableEditor: React.FC = () => {
     editingCell,
     tempValues,
     errors,
+    hasEditingError,
     startEditing,
     updateTempValue,
     validateAndSaveName,
@@ -132,6 +148,7 @@ export const TableEditor: React.FC = () => {
     saveDataType,
     handleKeyDown,
     cancelEditing,
+    dismissError,
   });
 
   /**

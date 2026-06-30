@@ -12,9 +12,11 @@ import { Select } from 'antd';
 export interface DataTypeCellProps {
   value: '' | 'BOOL' | 'INT';
   isEditing: boolean;
+  hasGlobalError: boolean;
   onChange: (value: 'BOOL' | 'INT') => void;
   onBlur: () => void;
   onDoubleClick: () => void;
+  onDismissError?: () => void;
 }
 
 /**
@@ -23,9 +25,11 @@ export interface DataTypeCellProps {
 export const DataTypeCell: React.FC<DataTypeCellProps> = ({
   value,
   isEditing,
+  hasGlobalError,
   onChange,
   onBlur,
   onDoubleClick,
+  onDismissError,
 }) => {
   // 编辑态
   if (isEditing) {
@@ -50,10 +54,19 @@ export const DataTypeCell: React.FC<DataTypeCellProps> = ({
     );
   }
 
-  // 展示态
+  // 展示态：如果全局有错误，onMouseDown 拦截并关闭错误（阻止 Select 抢焦点）
+  // 下一次双击才正常进入编辑态
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (hasGlobalError && onDismissError) {
+      e.preventDefault();
+      onDismissError();
+    }
+  };
+
   return (
     <div
-      onDoubleClick={onDoubleClick}
+      onMouseDown={handleMouseDown}
+      onDoubleClick={hasGlobalError ? undefined : onDoubleClick}
       style={{ cursor: 'pointer', minHeight: '24px', lineHeight: '24px' }}
     >
       {value || <span style={{ color: '#bfbfbf' }}>Select data type</span>}

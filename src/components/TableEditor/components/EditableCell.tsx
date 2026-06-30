@@ -16,10 +16,12 @@ export interface EditableCellProps {
   isEditing: boolean;
   error: ValidationError | null;
   placeholder: string;
+  hasGlobalError: boolean; // 表格中是否有其他单元格处于错误编辑态
   onChange: (value: string) => void;
   onBlur: () => void;
   onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onClick: () => void;
+  onDismissError?: () => void; // 关闭全局错误编辑态
 }
 
 /**
@@ -31,10 +33,12 @@ export const EditableCell: React.FC<EditableCellProps> = ({
   isEditing,
   error,
   placeholder,
+  hasGlobalError,
   onChange,
   onBlur,
   onKeyDown,
   onClick,
+  onDismissError,
 }) => {
   const hasError = !!error;
 
@@ -66,9 +70,21 @@ export const EditableCell: React.FC<EditableCellProps> = ({
     return inputElement;
   }
 
-  // 展示态
+  // 展示态：如果全局有错误，onMouseDown 拦截并关闭错误（阻止新 input 抢焦点）
+  // 下一次点击才正常进入编辑态
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (hasGlobalError && onDismissError) {
+      e.preventDefault();
+      onDismissError();
+    }
+  };
+
   return (
-    <div onClick={onClick} style={{ cursor: 'pointer', minHeight: '24px', lineHeight: '24px' }}>
+    <div
+      onMouseDown={handleMouseDown}
+      onClick={hasGlobalError ? undefined : onClick}
+      style={{ cursor: 'pointer', minHeight: '24px', lineHeight: '24px' }}
+    >
       {value || <span style={{ color: '#bfbfbf' }}>{placeholder}</span>}
     </div>
   );

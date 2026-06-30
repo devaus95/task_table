@@ -18,6 +18,7 @@ export interface ColumnsConfigParams {
   editingCell: EditingCell;
   tempValues: TempValues;
   errors: Map<string, ValidationError>;
+  hasEditingError: boolean;
   startEditing: (
     rowIndex: number,
     column: 'name' | 'dataType' | 'defaultValue' | 'comment'
@@ -33,6 +34,7 @@ export interface ColumnsConfigParams {
     column: 'name' | 'defaultValue' | 'comment'
   ) => void;
   cancelEditing: () => void;
+  dismissError: () => void;
 }
 
 /**
@@ -43,6 +45,7 @@ export const useColumns = (params: ColumnsConfigParams): ColumnsType<Variable> =
     editingCell,
     tempValues,
     errors,
+    hasEditingError,
     startEditing,
     updateTempValue,
     validateAndSaveName,
@@ -51,6 +54,7 @@ export const useColumns = (params: ColumnsConfigParams): ColumnsType<Variable> =
     saveDataType,
     handleKeyDown,
     cancelEditing,
+    dismissError,
   } = params;
 
   return useMemo(
@@ -80,17 +84,19 @@ export const useColumns = (params: ColumnsConfigParams): ColumnsType<Variable> =
               isEditing={isEditing}
               error={error}
               placeholder="Enter variable name"
+              hasGlobalError={hasEditingError}
               onChange={(value) => updateTempValue(`name-${record.index}`, value)}
               onBlur={() => {
-                // 如果当前已有错误，blur时清除错误并退出编辑
+                // 有错误时不处理 blur，保持编辑态和错误提示
+                // 用户通过点其他单元格的 onMouseDown 来关闭错误
                 if (error) {
-                  cancelEditing();
-                } else {
-                  validateAndSaveName(record.index);
+                  return;
                 }
+                validateAndSaveName(record.index);
               }}
               onKeyDown={(e) => handleKeyDown(e, record.index, 'name')}
               onClick={() => startEditing(record.index, 'name')}
+              onDismissError={dismissError}
             />
           );
         },
@@ -108,9 +114,11 @@ export const useColumns = (params: ColumnsConfigParams): ColumnsType<Variable> =
             <DataTypeCell
               value={text as '' | 'BOOL' | 'INT'}
               isEditing={isEditing}
+              hasGlobalError={hasEditingError}
               onChange={(value) => saveDataType(record.index, value)}
               onBlur={cancelEditing}
               onDoubleClick={() => startEditing(record.index, 'dataType')}
+              onDismissError={dismissError}
             />
           );
         },
@@ -140,13 +148,14 @@ export const useColumns = (params: ColumnsConfigParams): ColumnsType<Variable> =
                     ? 'true/false'
                     : 'Enter integer'
               }
+              hasGlobalError={hasEditingError}
               onChange={(value) => updateTempValue(`defaultValue-${record.index}`, value)}
               onBlur={() => {
+                // 有错误时不处理 blur，保持编辑态和错误提示
                 if (error) {
-                  cancelEditing();
-                } else {
-                  validateAndSaveDefaultValue(record.index);
+                  return;
                 }
+                validateAndSaveDefaultValue(record.index);
               }}
               onKeyDown={(e) => handleKeyDown(e, record.index, 'defaultValue')}
               onClick={() => {
@@ -154,6 +163,7 @@ export const useColumns = (params: ColumnsConfigParams): ColumnsType<Variable> =
                   startEditing(record.index, 'defaultValue');
                 }
               }}
+              onDismissError={dismissError}
             />
           );
         },
@@ -175,10 +185,12 @@ export const useColumns = (params: ColumnsConfigParams): ColumnsType<Variable> =
               isEditing={isEditing}
               error={null}
               placeholder="Enter comment (optional)"
+              hasGlobalError={hasEditingError}
               onChange={(value) => updateTempValue(`comment-${record.index}`, value)}
               onBlur={() => saveComment(record.index)}
               onKeyDown={(e) => handleKeyDown(e, record.index, 'comment')}
               onClick={() => startEditing(record.index, 'comment')}
+              onDismissError={dismissError}
             />
           );
         },
@@ -188,6 +200,7 @@ export const useColumns = (params: ColumnsConfigParams): ColumnsType<Variable> =
       editingCell,
       errors,
       tempValues,
+      hasEditingError,
       startEditing,
       updateTempValue,
       validateAndSaveName,
@@ -196,6 +209,7 @@ export const useColumns = (params: ColumnsConfigParams): ColumnsType<Variable> =
       saveDataType,
       handleKeyDown,
       cancelEditing,
+      dismissError,
     ]
   );
 };
