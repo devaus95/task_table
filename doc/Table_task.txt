@@ -1,0 +1,61 @@
+Table Editor
+Background
+Here is a screenshot of one of the most important product in Siemens digital industry: TIA Portal.
+Try to implement a simplified variable table editor that supports adding, deleting, modifying, and viewing variables.
+Core Functions
+1. Table Management: Display a list of variables, including name, data type, default value, and comment.
+2. Data Operations: Support adding rows, deleting rows, and editing cell content.
+3. Data Validation: Validate uniqueness of names, data type, and default value format.
+4. Support two data types: BOOL and INT (32-bit signed integer)
+
+Technical Requirements
+Use React + TypeScript You may use any table component library (e.g., ag-Grid, react-table, antd Table, etc.) You may use any CSS framework and component library Use any state management solution (Mobx, Redux, Zustand, etc., your choice) Clear code structure, clear component responsibilities You may use any AI assistant tools You may use any test framework (e.g., jest, vitest, playwright )
+Simulation Story Card
+
+Index 1 2 3
+
+Name Start Stop Count
+
+Datatype BOOL BOOL INT
+
+Default Value true true 123
+
+Comment system start
+count number
+
+Please follow these ACs:
+AC 1: Table Display
+Given: the variable table editor page is opened When: the page is loaded Then: Display an empty table with the following columns: Index, Name, Data Type, Default Value, Comment Index column is read-only and auto-generated Show "Add Row" and "Delete Row" buttons
+
+AC 2: Add Variable Row
+Given: the table is empty or has data When: the user clicks the "Add Row" button Then: Add a new row at the end of the table All fields (name, data type, default value, comment) in the new row are empty by default Index is auto-generated as current max index + 1
+AC 3: Delete Variable Row
+Given: the table has at least one row When: the user selects a row and clicks the "Delete Row" button Then: The row is deleted from the table Indexes of subsequent rows are recalculated automatically
+AC 4: Edit Variable Name
+Given: the table has data rows When: the user clicks the name cell and enters a new name Then: If the input is empty, revert to the original value and show an error prompt If the input name already exists in the table (case-insensitive), show an error "Name already exists" and do not allow saving If the input name is unique and not empty, save successfully
+Example:
+1. Table already has counter 2. User enters Counter  show error prompt 3. User enters newCounter  save successfully
+
+AC 5: Select Data Type
+When: the user double click the data type cell Then: Show a dropdown with two options: BOOL and INT After selection, the cell displays the selected type And When: the user switches the data type Then: The default value cell is automatically updated to the default value of the new type (BOOL -> TRUE, INT -> 0)
+Example:
+1. Current type is BOOL, default value is TRUE 2. User changes type to INT -> default value automatically changes to 0
+AC 6: Edit BOOL Default Value
+Given: a variable row with data type BOOL When: the user clicks the default value cell and enters a value Then: Accept input: true, false, TRUE, FALSE (case-insensitive) Display format is unified as uppercase: TRUE or FALSE If other values are entered, show an error prompt
+Example:
+1. User enters TRUE -> display TRUE 2. User enters false -> display FALSE 3. User enters yes -> show an error prompt
+AC 7: Edit INT Default Value
+Given: a variable row with data type INT When: the user clicks the default value cell and enters a value
+
+Then: Accept input: integer, range -2147483648 to 2147483647 If input is not an integer or out of range, show an error prompt
+Example:
+1. User enters 42 -> save successfully 2. User enters 3.14 -> show an error prompt 3. User enters 9999999999 -> show an error prompt (out of range)
+AC 8: Edit Comment
+Given: the table has data rows When: the user clicks the comment cell and enters text Then: Accept any text input The value can be empty
+Deliverables
+Source Code
+1. Complete runnable project source code (remove node_modules) 2. README.md: Include how to run the project and project structure
+explanation
+Please upload the project to github or other code manage platform.
+
+
